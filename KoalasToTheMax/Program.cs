@@ -16,23 +16,34 @@ namespace KoalasToTheMax
             Console.WriteLine("\nWelcome to the koalastothemax.com auto-solver. \n\"help\" for commands");
             while (true)
             {
+                Console.Write('>');
                 args = Console.ReadLine().ToLower().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (args[0] == "run")
                 {
+                    int startX = 673, startY = 318, width = 512, pauseAfterLine = 140, pauseAfterStep = 2;
                     if (args.Length > 1)
                     {
                         if (args.Contains("-d"))
                         {
-                            if (args.Contains("-t") || args.Contains("-c"))
+                            if (args.Length > 2)
+                            {
                                 Console.WriteLine("Too many arguments.");
-                            else
-                                new Program().Run();
+                                continue;
+                            }
                         }
                         else if (args.Contains("-c"))
                         {
+                            if (args.Contains("-t"))
+                            {
+                                Console.WriteLine("Too many arguments.");
+                                continue;
+                            }
+
                             try
                             {
-                                new Program().Run(int.Parse(args[2]), int.Parse(args[3]));
+                                int indexOfC = args.ToList().IndexOf("-c");
+                                startX = Int32.Parse(args[indexOfC + 1]);
+                                startY = Int32.Parse(args[indexOfC + 2]);
                             }
                             catch (IndexOutOfRangeException ioore)
                             {
@@ -47,21 +58,57 @@ namespace KoalasToTheMax
                         }
                         else if (args.Contains("-t"))
                         {
-                            //Console.WriteLine("Please click the top left corner as precisely as possible.");
+                            Console.WriteLine("Step 1: Position pointer at top left corner");
+                            Console.WriteLine("Step 2: Switch to this console (with Alt+Tab)");
+                            Console.WriteLine("Step 3: Hit Enter");
 
-                            Console.WriteLine("Uh, no. That's way more complicated than I anticipated it was going to be. Try sth else.");
+                            bool abort = false;
 
-                            //UserActivityHook actHook = new UserActivityHook();
+                            while (true)
+                            {
+                                if (Console.KeyAvailable)
+                                {
+                                    if (Console.ReadKey(true).Key == ConsoleKey.Enter)
+                                    {
+                                        startX = Cursor.Position.X;
+                                        startY = Cursor.Position.Y;
+                                        Console.WriteLine($"startX = {startX}, startY = {startY}");
+                                        break;
+                                    }
+                                    else if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                                    {
+                                        Console.WriteLine("Aborted by user");
+                                        abort = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (abort)
+                                continue;
                         }
                         if (args.Contains("-s"))
                         {
-
+                            try
+                            {
+                                int indexOfS = args.ToList().IndexOf("-s");
+                                pauseAfterStep = Int32.Parse(args[indexOfS + 1]);
+                                pauseAfterLine = Int32.Parse(args[indexOfS + 2]);
+                            }
+                            catch (IndexOutOfRangeException ioore)
+                            {
+                                Console.WriteLine("Insufficient arguments");
+                                Console.WriteLine(ioore.StackTrace);
+                                continue;
+                            }
+                            catch (FormatException re)
+                            {
+                                Console.WriteLine("Invalid format");
+                                Console.WriteLine(re.StackTrace);
+                                continue;
+                            }
                         }
                     }
-                    else
-                    {
-                        new Program().Run();
-                    }
+                    new Program().Run(startX, startY, width, pauseAfterStep, pauseAfterLine);
                 }
                 else if (args[0] == "track")
                 {
@@ -76,9 +123,9 @@ namespace KoalasToTheMax
                     Console.WriteLine(String.Format("\n{0, -20} {1}\n", "Command", "Description"));
                     Console.WriteLine(String.Format("{0, -20} {1}", "run", "Runs application with specified settings (esc to cancel, p to pause)"));
                     Console.WriteLine(String.Format("{0, -20} {1}", "  -d", "Run with default settings (FullHD screen)"));
-                    Console.WriteLine(String.Format("{0, -20} {1}", "  -c coordinates", "Run with custom settings (space delimited coordinates of top left corner)"));
-                    Console.WriteLine(String.Format("{0, -10} {1}", "  -t", "Run after clicking the corners of the image"));
-                    //Console.WriteLine(String.Format("{0, -10} {1}", "  -s step line", "Specify the amount of milliseconds to wait after each step (std: 4) and line (std: 50)"));
+                    Console.WriteLine(String.Format("{0, -20} {1}", "  -c <X> <Y>", "Run after manually specifying coordinates (space delimited, top left corner)"));
+                    Console.WriteLine(String.Format("{0, -20} {1}", "  -t", "Run after positioning pointer at top left corner"));
+                    Console.WriteLine(String.Format("{0, -20} {1}", "  -s <step> <line>", "Specify the amount of milliseconds to wait after each step (default: 2) and line (default: 140)"));
                     Console.WriteLine(String.Format("{0, -20} {1}", "track", "Output pointer position (any key to cancel)"));
                     Console.WriteLine(String.Format("{0, -20} {1}", "beep", "beep"));
                     Console.WriteLine(String.Format("{0, -20} {1}", "help", "This."));
@@ -95,9 +142,9 @@ namespace KoalasToTheMax
             }
         }
 
-        void Run(int startX = 673, int startY = 318, int width = 512)
+        void Run(int startX = 673, int startY = 318, int width = 512, int pauseAfterStep = 2, int pauseAfterLine = 140)
         {
-            Console.WriteLine("Running...");
+            Console.Write("Running... ");
             for (int i = 0; i < 7; i++)
             {
                 for (int j = 0; j < Math.Pow(2, i); j++)
@@ -105,12 +152,12 @@ namespace KoalasToTheMax
                     int y = startY + width / (int)Math.Pow(2, i + 1) + width * j / (int)Math.Pow(2, i);
                     Cursor.Position = new Point(startX, y);
 
-                    Thread.Sleep(50);
+                    Thread.Sleep(pauseAfterLine / 2);
 
                     for (int x = startX; x < startX + width; x += 4)
                     {
                         Cursor.Position = new Point(x, y);
-                        Thread.Sleep(2);
+                        Thread.Sleep(pauseAfterStep);
                         if (Console.KeyAvailable)
                         {
                             if (Console.ReadKey(true).Key == ConsoleKey.P)
@@ -130,13 +177,13 @@ namespace KoalasToTheMax
                                 Console.WriteLine("Program stopped (terminated by user)");
                                 return;
                             }
-                            Console.WriteLine("Continuing...");
+                            Console.Write("\nContinuing... ");
                         }
                     }
-                    Thread.Sleep(70);
+                    Thread.Sleep(pauseAfterLine / 2);
                 }
             }
-            Console.WriteLine("Finished!");
+            Console.WriteLine("Done!");
         }
 
         void Track()
